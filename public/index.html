@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lizard Pal 🦎</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #1a3a1a 0%, #2d5a27 50%, #1a3a1a 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 16px;
+      gap: 16px;
+    }
+
+    h1 {
+      color: #a8e063;
+      font-size: 2rem;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+      letter-spacing: 2px;
+    }
+
+    /* ── Name banner ── */
+    #name-banner {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(0,0,0,0.35);
+      border-radius: 40px;
+      padding: 8px 20px;
+      color: #fff;
+      font-size: 1.1rem;
+    }
+    #name-banner input {
+      border: none;
+      background: transparent;
+      color: #a8e063;
+      font-size: 1.2rem;
+      font-weight: bold;
+      width: 120px;
+      outline: none;
+      border-bottom: 2px dashed #a8e063;
+    }
+
+    /* ── Main layout ── */
+    #main {
+      display: flex;
+      gap: 16px;
+      width: 100%;
+      max-width: 1100px;
+      align-items: flex-start;
+    }
+
+    /* ── Enclosure ── */
+    #enclosure {
+      flex: 1;
+      min-width: 0;
+      position: relative;
+      height: 500px;
+      background: linear-gradient(180deg, #87CEEB 0%, #87CEEB 30%, #8B6914 30%, #a0522d 45%, #6B8E23 45%, #556B2F 100%);
+      border-radius: 20px;
+      border: 6px solid #5a3e1b;
+      overflow: hidden;
+      box-shadow: inset 0 0 40px rgba(0,0,0,0.3), 0 8px 32px rgba(0,0,0,0.4);
+      cursor: default;
+    }
+
+    /* Sky sun */
+    #enclosure::before {
+      content: '☀️';
+      position: absolute;
+      top: 10px;
+      right: 20px;
+      font-size: 2.5rem;
+      filter: drop-shadow(0 0 12px rgba(255,200,0,0.8));
+      animation: sun-pulse 4s ease-in-out infinite;
+    }
+
+    @keyframes sun-pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.08); }
+    }
+
+    /* Grass blades */
+    #enclosure::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0; right: 0;
+      height: 90px;
+      background: repeating-linear-gradient(
+        to right,
+        transparent 0px, transparent 18px,
+        rgba(100,160,40,0.25) 18px, rgba(100,160,40,0.25) 22px
+      );
+      pointer-events: none;
+    }
+
+    /* ── Draggable objects ── */
+    .obj {
+      position: absolute;
+      cursor: grab;
+      user-select: none;
+      transition: filter 0.2s, transform 0.15s;
+      filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.4));
+      touch-action: none;
+    }
+    .obj:hover { transform: scale(1.1); filter: drop-shadow(2px 6px 10px rgba(0,0,0,0.5)); }
+    .obj:active { cursor: grabbing; transform: scale(1.15); z-index: 100; }
+    .obj span { font-size: inherit; display: block; }
+
+    /* ── Iguana ── */
+    #iguana-wrap {
+      position: absolute;
+      cursor: pointer;
+      z-index: 50;
+      transition: left 2.5s cubic-bezier(0.4,0,0.2,1), bottom 2.5s cubic-bezier(0.4,0,0.2,1);
+    }
+
+    #iguana {
+      position: relative;
+      width: 110px;
+      height: 80px;
+      animation: breathe 3s ease-in-out infinite;
+    }
+    #iguana.talking { animation: talk-bounce 0.4s ease-in-out infinite alternate; }
+    #iguana.happy   { animation: happy-wiggle 0.5s ease-in-out 3; }
+
+    @keyframes breathe {
+      0%, 100% { transform: scaleY(1) scaleX(1); }
+      50% { transform: scaleY(1.04) scaleX(0.98); }
+    }
+    @keyframes talk-bounce {
+      0% { transform: translateY(0); }
+      100% { transform: translateY(-6px); }
+    }
+    @keyframes happy-wiggle {
+      0%   { transform: rotate(-6deg); }
+      50%  { transform: rotate(6deg); }
+      100% { transform: rotate(0deg); }
+    }
+
+    /* SVG iguana body */
+    #iguana svg { width: 110px; height: 80px; overflow: visible; }
+
+    /* Speech bubble */
+    #speech-bubble {
+      display: none;
+      position: absolute;
+      bottom: 95px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #fffde7;
+      border: 3px solid #f9a825;
+      border-radius: 18px;
+      padding: 10px 16px;
+      max-width: 280px;
+      min-width: 140px;
+      font-size: 0.95rem;
+      line-height: 1.4;
+      color: #333;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+      text-align: center;
+      z-index: 200;
+      white-space: pre-wrap;
+    }
+    #speech-bubble::after {
+      content: '';
+      position: absolute;
+      bottom: -16px;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 8px solid transparent;
+      border-top-color: #f9a825;
+    }
+    #speech-bubble.visible { display: block; animation: pop-in 0.3s cubic-bezier(0.175,0.885,0.32,1.275); }
+    @keyframes pop-in {
+      0%   { opacity: 0; transform: translateX(-50%) scale(0.7); }
+      100% { opacity: 1; transform: translateX(-50%) scale(1); }
+    }
+
+    /* typing dots */
+    .dots span {
+      display: inline-block;
+      animation: dot-bounce 1.2s ease-in-out infinite;
+      font-size: 1.4rem;
+      color: #f9a825;
+    }
+    .dots span:nth-child(2) { animation-delay: 0.2s; }
+    .dots span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes dot-bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-6px); }
+    }
+
+    /* ── Sidebar: chat + toy shelf ── */
+    #sidebar {
+      width: 300px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    /* Toy shelf */
+    #toy-shelf {
+      background: rgba(0,0,0,0.4);
+      border-radius: 16px;
+      padding: 12px;
+      border: 2px solid rgba(168,224,99,0.3);
+    }
+    #toy-shelf h3 {
+      color: #a8e063;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 10px;
+    }
+    #toy-shelf-items {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .shelf-item {
+      font-size: 2rem;
+      cursor: grab;
+      transition: transform 0.15s;
+      filter: drop-shadow(1px 2px 4px rgba(0,0,0,0.3));
+    }
+    .shelf-item:hover { transform: scale(1.2); }
+    .shelf-item:active { cursor: grabbing; }
+
+    /* Chat panel */
+    #chat-panel {
+      background: rgba(0,0,0,0.4);
+      border-radius: 16px;
+      padding: 14px;
+      border: 2px solid rgba(168,224,99,0.3);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    #chat-panel h3 {
+      color: #a8e063;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    #quick-questions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .q-btn {
+      background: rgba(168,224,99,0.15);
+      border: 1.5px solid #a8e063;
+      color: #a8e063;
+      border-radius: 20px;
+      padding: 5px 10px;
+      font-size: 0.78rem;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+    }
+    .q-btn:hover { background: rgba(168,224,99,0.3); transform: scale(1.04); }
+
+    #chat-input-row {
+      display: flex;
+      gap: 8px;
+    }
+    #chat-input {
+      flex: 1;
+      padding: 10px 14px;
+      border-radius: 24px;
+      border: 2px solid rgba(168,224,99,0.5);
+      background: rgba(255,255,255,0.1);
+      color: #fff;
+      font-size: 1rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    #chat-input::placeholder { color: rgba(255,255,255,0.45); }
+    #chat-input:focus { border-color: #a8e063; }
+
+    #send-btn {
+      background: #a8e063;
+      border: none;
+      border-radius: 50%;
+      width: 44px; height: 44px;
+      font-size: 1.3rem;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      display: flex; align-items: center; justify-content: center;
+    }
+    #send-btn:hover { background: #c5f07a; transform: scale(1.08); }
+    #send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    #chat-log {
+      max-height: 200px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding-right: 4px;
+    }
+    #chat-log::-webkit-scrollbar { width: 4px; }
+    #chat-log::-webkit-scrollbar-thumb { background: rgba(168,224,99,0.4); border-radius: 4px; }
+
+    .msg {
+      padding: 8px 12px;
+      border-radius: 14px;
+      font-size: 0.9rem;
+      line-height: 1.4;
+      max-width: 90%;
+    }
+    .msg.user {
+      background: rgba(168,224,99,0.2);
+      color: #e0f0b0;
+      align-self: flex-end;
+      border-bottom-right-radius: 4px;
+    }
+    .msg.iguana {
+      background: rgba(255,253,231,0.12);
+      color: #fffde7;
+      align-self: flex-start;
+      border-bottom-left-radius: 4px;
+      border: 1px solid rgba(249,168,37,0.3);
+    }
+
+    /* ── Wiggle hint ── */
+    #hint {
+      color: rgba(168,224,99,0.7);
+      font-size: 0.8rem;
+      text-align: center;
+      animation: fade-pulse 3s ease-in-out infinite;
+    }
+    @keyframes fade-pulse {
+      0%, 100% { opacity: 0.5; }
+      50% { opacity: 1; }
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 760px) {
+      #main { flex-direction: column; }
+      #sidebar { width: 100%; }
+      #enclosure { height: 380px; }
+    }
+  </style>
+</head>
+<body>
+
+<h1>🦎 Lizard Pal</h1>
+
+<div id="name-banner">
+  <span>My lizard's name is</span>
+  <input id="lizard-name" type="text" value="Iggy" maxlength="16" spellcheck="false" />
+  <span>!</span>
+</div>
+
+<div id="main">
+
+  <!-- ── ENCLOSURE ── -->
+  <div id="enclosure">
+    <!-- Iguana -->
+    <div id="iguana-wrap" style="left:160px; bottom:90px;">
+      <div id="speech-bubble"></div>
+      <div id="iguana">
+        <svg viewBox="0 0 110 80" xmlns="http://www.w3.org/2000/svg">
+          <!-- tail -->
+          <path d="M90 55 Q108 65 112 45 Q116 30 105 35" stroke="#4a7c20" stroke-width="8" fill="none" stroke-linecap="round"/>
+          <!-- body -->
+          <ellipse cx="58" cy="52" rx="36" ry="22" fill="#5a9e28"/>
+          <!-- belly -->
+          <ellipse cx="58" cy="56" rx="26" ry="14" fill="#8fc84a"/>
+          <!-- dorsal spines -->
+          <path d="M30 34 L33 22 L38 35 L43 20 L48 35 L53 18 L58 34 L63 20 L68 34 L73 22 L78 35" stroke="#3d7a18" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          <!-- head -->
+          <ellipse cx="24" cy="50" rx="20" ry="16" fill="#5a9e28"/>
+          <!-- snout bump -->
+          <ellipse cx="8" cy="52" rx="8" ry="6" fill="#4a8a20"/>
+          <!-- dewlap -->
+          <ellipse cx="22" cy="64" rx="10" ry="6" fill="#e07830"/>
+          <!-- eye white -->
+          <circle cx="18" cy="44" r="6" fill="white"/>
+          <!-- eye iris -->
+          <circle cx="18" cy="44" r="4" fill="#f0a020"/>
+          <!-- eye pupil -->
+          <ellipse cx="18" cy="44" rx="2" ry="3.5" fill="#1a1a1a"/>
+          <!-- eye shine -->
+          <circle cx="19.5" cy="42.5" r="1.2" fill="white"/>
+          <!-- nostril -->
+          <circle cx="5" cy="50" r="1.5" fill="#3d7a18"/>
+          <!-- front legs -->
+          <line x1="38" y1="68" x2="28" y2="80" stroke="#4a8a20" stroke-width="6" stroke-linecap="round"/>
+          <line x1="50" y1="70" x2="45" y2="82" stroke="#4a8a20" stroke-width="6" stroke-linecap="round"/>
+          <!-- back legs -->
+          <line x1="72" y1="68" x2="80" y2="80" stroke="#4a8a20" stroke-width="6" stroke-linecap="round"/>
+          <line x1="83" y1="66" x2="94" y2="76" stroke="#4a8a20" stroke-width="6" stroke-linecap="round"/>
+          <!-- toes front -->
+          <line x1="28" y1="80" x2="22" y2="82" stroke="#3d7a18" stroke-width="3" stroke-linecap="round"/>
+          <line x1="28" y1="80" x2="27" y2="84" stroke="#3d7a18" stroke-width="3" stroke-linecap="round"/>
+          <line x1="28" y1="80" x2="33" y2="83" stroke="#3d7a18" stroke-width="3" stroke-linecap="round"/>
+          <!-- toes back -->
+          <line x1="80" y1="80" x2="74" y2="83" stroke="#3d7a18" stroke-width="3" stroke-linecap="round"/>
+          <line x1="80" y1="80" x2="80" y2="85" stroke="#3d7a18" stroke-width="3" stroke-linecap="round"/>
+          <line x1="80" y1="80" x2="86" y2="82" stroke="#3d7a18" stroke-width="3" stroke-linecap="round"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Draggable enclosure items -->
+    <div class="obj" id="obj-rock1"    style="font-size:3rem; left:40px;  bottom:60px;" data-name="a big rock">       <span>🪨</span></div>
+    <div class="obj" id="obj-rock2"    style="font-size:2rem; left:300px; bottom:55px;" data-name="a small rock">     <span>🪨</span></div>
+    <div class="obj" id="obj-log"      style="font-size:3.5rem;left:200px;bottom:58px;" data-name="a log">             <span>🪵</span></div>
+    <div class="obj" id="obj-plant1"   style="font-size:3.5rem;left:20px; bottom:110px;"data-name="a leafy plant">    <span>🌿</span></div>
+    <div class="obj" id="obj-plant2"   style="font-size:3rem; left:380px;bottom:90px;" data-name="a tropical plant">  <span>🌴</span></div>
+    <div class="obj" id="obj-waterdish"style="font-size:2.5rem;left:120px;bottom:56px;"data-name="the water dish">   <span>🫙</span></div>
+    <div class="obj" id="obj-foodbowl" style="font-size:2.5rem;left:250px;bottom:56px;"data-name="the food bowl">    <span>🥗</span></div>
+    <div class="obj" id="obj-ball"     style="font-size:2rem; left:340px;bottom:65px;" data-name="a colorful ball">   <span>🔴</span></div>
+    <div class="obj" id="obj-flower"   style="font-size:2.5rem;left:70px; bottom:100px;"data-name="a pretty flower"> <span>🌸</span></div>
+    <div class="obj" id="obj-bug"      style="font-size:2rem; left:310px;bottom:110px;"data-name="a cricket">        <span>🦗</span></div>
+  </div>
+
+  <!-- ── SIDEBAR ── -->
+  <div id="sidebar">
+
+    <div id="toy-shelf">
+      <h3>🎒 Toy Shelf — drag into the enclosure!</h3>
+      <div id="toy-shelf-items">
+        <span class="shelf-item" title="Star" data-name="a shiny star" data-emoji="⭐">⭐</span>
+        <span class="shelf-item" title="Mushroom" data-name="a mushroom" data-emoji="🍄">🍄</span>
+        <span class="shelf-item" title="Butterfly" data-name="a butterfly" data-emoji="🦋">🦋</span>
+        <span class="shelf-item" title="Pinecone" data-name="a pinecone" data-emoji="🌲">🌲</span>
+        <span class="shelf-item" title="Gem" data-name="a sparkly gem" data-emoji="💎">💎</span>
+        <span class="shelf-item" title="Snail" data-name="a snail" data-emoji="🐌">🐌</span>
+        <span class="shelf-item" title="Rainbow" data-name="a rainbow" data-emoji="🌈">🌈</span>
+        <span class="shelf-item" title="Strawberry" data-name="a strawberry" data-emoji="🍓">🍓</span>
+      </div>
+    </div>
+
+    <div id="chat-panel">
+      <h3>💬 Talk to <span class="lizard-name-display">Iggy</span>!</h3>
+      <div id="quick-questions">
+        <button class="q-btn" onclick="quickAsk('Hello! What is your name?')">👋 Say hi!</button>
+        <button class="q-btn" onclick="quickAsk('What do you like to eat?')">🍃 Favorite food?</button>
+        <button class="q-btn" onclick="quickAsk('Can you do a trick?')">🎉 Do a trick!</button>
+        <button class="q-btn" onclick="quickAsk('Are you happy today?')">😊 Are you happy?</button>
+        <button class="q-btn" onclick="quickAsk('What do lizards dream about?')">💭 What do you dream?</button>
+        <button class="q-btn" onclick="quickAsk('Can you sing a song?')">🎵 Sing a song!</button>
+      </div>
+      <div id="chat-log"></div>
+      <div id="chat-input-row">
+        <input id="chat-input" type="text" placeholder="Type something to Iggy..." maxlength="200" />
+        <button id="send-btn" onclick="sendMessage()" title="Send">➤</button>
+      </div>
+      <div id="hint">👆 Click the iguana to say hi!</div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // ── Session & state ──────────────────────────────────────────────
+  const sessionId = Math.random().toString(36).slice(2);
+  let isBusy = false;
+  let nearbyObjects = [];
+  let bubbleTimeout = null;
+  let wanderInterval = null;
+
+  const iguanaWrap = document.getElementById('iguana-wrap');
+  const iguanaEl   = document.getElementById('iguana');
+  const bubble     = document.getElementById('speech-bubble');
+  const enclosure  = document.getElementById('enclosure');
+  const chatLog    = document.getElementById('chat-log');
+  const chatInput  = document.getElementById('chat-input');
+  const sendBtn    = document.getElementById('send-btn');
+  const nameInput  = document.getElementById('lizard-name');
+
+  // ── Lizard name ──────────────────────────────────────────────────
+  function getLizardName() { return nameInput.value.trim() || 'Iggy'; }
+
+  nameInput.addEventListener('input', () => {
+    document.querySelectorAll('.lizard-name-display').forEach(el => el.textContent = getLizardName());
+    chatInput.placeholder = `Type something to ${getLizardName()}...`;
+  });
+
+  // ── Wander movement ─────────────────────────────────────────────
+  const ENC_MARGIN = 20;
+
+  function getEnclosureBounds() {
+    const ew = enclosure.offsetWidth;
+    const eh = enclosure.offsetHeight;
+    return {
+      maxLeft:   ew - 130 - ENC_MARGIN,
+      maxBottom: eh - 90  - ENC_MARGIN,
+      minLeft:   ENC_MARGIN,
+      minBottom: 50
+    };
+  }
+
+  function wander() {
+    if (isBusy) return;
+    const b = getEnclosureBounds();
+    const newLeft   = Math.random() * (b.maxLeft   - b.minLeft)   + b.minLeft;
+    const newBottom = Math.random() * (b.maxBottom - b.minBottom) + b.minBottom;
+    iguanaWrap.style.left   = newLeft   + 'px';
+    iguanaWrap.style.bottom = newBottom + 'px';
+    detectNearbyObjects();
+  }
+
+  wanderInterval = setInterval(wander, 4500 + Math.random() * 2000);
+
+  // ── Detect nearby objects ────────────────────────────────────────
+  function detectNearbyObjects() {
+    const iRect = iguanaWrap.getBoundingClientRect();
+    const ic = { x: iRect.left + iRect.width / 2, y: iRect.top + iRect.height / 2 };
+    nearbyObjects = [];
+    document.querySelectorAll('.obj').forEach(obj => {
+      const r = obj.getBoundingClientRect();
+      const oc = { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+      const dist = Math.hypot(ic.x - oc.x, ic.y - oc.y);
+      if (dist < 130) nearbyObjects.push(obj.dataset.name);
+    });
+  }
+
+  // ── Bubble helpers ───────────────────────────────────────────────
+  function showBubble(text, duration = 5000) {
+    clearTimeout(bubbleTimeout);
+    bubble.innerHTML = text;
+    bubble.classList.add('visible');
+
+    // Position bubble: flip below if iguana is near top
+    const iguanaBottom = parseInt(iguanaWrap.style.bottom);
+    const encH = enclosure.offsetHeight;
+    if (encH - iguanaBottom < 200) {
+      bubble.style.bottom = 'auto';
+      bubble.style.top = '90px';
+      bubble.style.removeProperty('bottom');
+    } else {
+      bubble.style.top = '';
+      bubble.style.bottom = '95px';
+    }
+
+    if (duration > 0) {
+      bubbleTimeout = setTimeout(() => {
+        bubble.classList.remove('visible');
+        iguanaEl.classList.remove('talking');
+      }, duration);
+    }
+  }
+
+  function showTyping() {
+    showBubble('<span class="dots"><span>•</span><span>•</span><span>•</span></span>', 0);
+    iguanaEl.classList.add('talking');
+  }
+
+  function hideBubble() {
+    bubble.classList.remove('visible');
+    iguanaEl.classList.remove('talking');
+  }
+
+  // ── Chat log ────────────────────────────────────────────────────
+  function addMsg(who, text) {
+    const el = document.createElement('div');
+    el.className = 'msg ' + who;
+    el.textContent = who === 'iguana' ? `🦎 ${text}` : `👦 ${text}`;
+    chatLog.appendChild(el);
+    chatLog.scrollTop = chatLog.scrollHeight;
+  }
+
+  // ── Send message to Claude ───────────────────────────────────────
+  async function sendMessage(text) {
+    const msg = text || chatInput.value.trim();
+    if (!msg || isBusy) return;
+
+    chatInput.value = '';
+    isBusy = true;
+    sendBtn.disabled = true;
+    addMsg('user', msg);
+    detectNearbyObjects();
+
+    showTyping();
+
+    try {
+      const res = await fetch('/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: msg,
+          lizardName: getLizardName(),
+          sessionId,
+          nearbyObjects
+        })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        const errMsg = data.error || 'Something went wrong!';
+        showBubble(`😟 Oops! ${errMsg}`, 6000);
+        addMsg('iguana', errMsg);
+      } else {
+        showBubble(data.reply, 7000);
+        addMsg('iguana', data.reply);
+        iguanaEl.classList.add('happy');
+        setTimeout(() => iguanaEl.classList.remove('happy'), 1500);
+      }
+    } catch (err) {
+      showBubble('😟 I lost my voice! Is the server running?', 5000);
+    }
+
+    isBusy = false;
+    sendBtn.disabled = false;
+  }
+
+  function quickAsk(text) {
+    chatInput.value = text;
+    sendMessage(text);
+  }
+
+  // ── Click iguana to greet ────────────────────────────────────────
+  iguanaWrap.addEventListener('click', () => {
+    if (!isBusy) sendMessage(`Hey ${getLizardName()}, what are you up to?`);
+  });
+
+  // ── Enter key ───────────────────────────────────────────────────
+  chatInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') sendMessage();
+  });
+
+  // ── Drag objects inside enclosure ───────────────────────────────
+  function makeDraggable(el) {
+    let ox = 0, oy = 0, startX = 0, startY = 0;
+
+    function onStart(e) {
+      e.preventDefault();
+      const pt = e.touches ? e.touches[0] : e;
+      startX = pt.clientX; startY = pt.clientY;
+      const rect = el.getBoundingClientRect();
+      ox = startX - rect.left; oy = startY - rect.top;
+      el.style.zIndex = 200;
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup',   onEnd);
+      document.addEventListener('touchmove', onMove, { passive: false });
+      document.addEventListener('touchend',  onEnd);
+    }
+
+    function onMove(e) {
+      e.preventDefault();
+      const pt = e.touches ? e.touches[0] : e;
+      const encRect = enclosure.getBoundingClientRect();
+      let x = pt.clientX - encRect.left - ox;
+      let y = pt.clientY - encRect.top  - oy;
+      const elW = el.offsetWidth, elH = el.offsetHeight;
+      x = Math.max(0, Math.min(encRect.width  - elW, x));
+      y = Math.max(0, Math.min(encRect.height - elH, y));
+      el.style.left   = x + 'px';
+      el.style.bottom = (encRect.height - y - elH) + 'px';
+      el.style.top    = '';
+    }
+
+    function onEnd() {
+      el.style.zIndex = '';
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup',   onEnd);
+      document.removeEventListener('touchmove', onMove);
+      document.removeEventListener('touchend',  onEnd);
+      detectNearbyObjects();
+      // React if near iguana
+      if (nearbyObjects.includes(el.dataset.name)) {
+        setTimeout(() => sendMessage(`Oh! You put ${el.dataset.name} near me!`), 300);
+      }
+    }
+
+    el.addEventListener('mousedown',  onStart);
+    el.addEventListener('touchstart', onStart, { passive: false });
+  }
+
+  document.querySelectorAll('.obj').forEach(makeDraggable);
+
+  // ── Toy shelf drag into enclosure ───────────────────────────────
+  document.querySelectorAll('.shelf-item').forEach(item => {
+    item.addEventListener('mousedown', e => {
+      e.preventDefault();
+      const emoji    = item.dataset.emoji;
+      const itemName = item.dataset.name;
+
+      // Create new obj in enclosure
+      const newObj = document.createElement('div');
+      newObj.className = 'obj';
+      newObj.dataset.name = itemName;
+      newObj.innerHTML = `<span style="font-size:2.5rem">${emoji}</span>`;
+      newObj.style.left   = '200px';
+      newObj.style.bottom = '80px';
+      enclosure.appendChild(newObj);
+      makeDraggable(newObj);
+
+      // Synthesize mouse-down to start dragging immediately
+      const synth = new MouseEvent('mousedown', {
+        clientX: e.clientX, clientY: e.clientY, bubbles: true
+      });
+      newObj.dispatchEvent(synth);
+    });
+  });
+
+  // ── Idle greeting after 3s ───────────────────────────────────────
+  setTimeout(() => {
+    if (!isBusy) {
+      const name = getLizardName();
+      showBubble(`Hi! I'm ${name}! 🦎 Click me or type something!`, 5000);
+    }
+  }, 3000);
+</script>
+</body>
+</html>
