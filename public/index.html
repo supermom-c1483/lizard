@@ -343,6 +343,68 @@
       50% { opacity: 1; }
     }
 
+    /* ── API Key setup overlay ── */
+    #api-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(10,30,10,0.92);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    #api-overlay.visible { display: flex; }
+    #api-box {
+      background: #1e3d1e;
+      border: 3px solid #a8e063;
+      border-radius: 24px;
+      padding: 36px 40px;
+      max-width: 440px;
+      width: 90%;
+      text-align: center;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+    }
+    #api-box h2 { color: #a8e063; font-size: 1.6rem; margin-bottom: 12px; }
+    #api-box p  { color: #cde; font-size: 0.95rem; line-height: 1.6; margin-bottom: 20px; }
+    #api-box a  { color: #a8e063; }
+    #api-key-input {
+      width: 100%;
+      padding: 12px 16px;
+      border-radius: 12px;
+      border: 2px solid rgba(168,224,99,0.5);
+      background: rgba(0,0,0,0.3);
+      color: #fff;
+      font-size: 0.95rem;
+      margin-bottom: 16px;
+      outline: none;
+    }
+    #api-key-input:focus { border-color: #a8e063; }
+    #api-save-btn {
+      background: #a8e063;
+      color: #1a3a1a;
+      border: none;
+      border-radius: 12px;
+      padding: 12px 32px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+    }
+    #api-save-btn:hover { background: #c5f07a; transform: scale(1.04); }
+    #api-error { color: #ff8a80; font-size: 0.85rem; margin-top: 10px; min-height: 20px; }
+    #api-change-btn {
+      background: none;
+      border: 1px solid rgba(168,224,99,0.4);
+      color: rgba(168,224,99,0.7);
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      margin-left: 8px;
+      vertical-align: middle;
+    }
+    #api-change-btn:hover { border-color: #a8e063; color: #a8e063; }
+
     /* ── Responsive ── */
     @media (max-width: 760px) {
       #main { flex-direction: column; }
@@ -353,12 +415,30 @@
 </head>
 <body>
 
+<!-- ── API Key Setup Overlay ── -->
+<div id="api-overlay">
+  <div id="api-box">
+    <h2>🦎 Welcome to Lizard Pal!</h2>
+    <p>
+      To make the iguana talk, you need a <strong>free API key</strong> from Anthropic.<br><br>
+      1. Go to <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a><br>
+      2. Sign up &amp; click <strong>API Keys → Create Key</strong><br>
+      3. Copy the key and paste it below!
+    </p>
+    <input id="api-key-input" type="password" placeholder="Paste your key here  (sk-ant-...)" autocomplete="off" />
+    <br>
+    <button id="api-save-btn" onclick="saveApiKey()">Save &amp; Start Playing! 🎉</button>
+    <div id="api-error"></div>
+  </div>
+</div>
+
 <h1>🦎 Lizard Pal</h1>
 
 <div id="name-banner">
   <span>My lizard's name is</span>
   <input id="lizard-name" type="text" value="Iggy" maxlength="16" spellcheck="false" />
   <span>!</span>
+  <button id="api-change-btn" onclick="showApiOverlay()" title="Change API key">🔑 Change Key</button>
 </div>
 
 <div id="main">
@@ -464,6 +544,35 @@
 </div>
 
 <script>
+  // ── API Key (stored in browser, never sent to anyone except Anthropic) ───
+  const apiOverlay  = document.getElementById('api-overlay');
+  const apiKeyInput = document.getElementById('api-key-input');
+  const apiError    = document.getElementById('api-error');
+
+  function getSavedKey() { return localStorage.getItem('lizard_api_key') || ''; }
+
+  function showApiOverlay() {
+    apiKeyInput.value = getSavedKey();
+    apiError.textContent = '';
+    apiOverlay.classList.add('visible');
+    setTimeout(() => apiKeyInput.focus(), 100);
+  }
+
+  function saveApiKey() {
+    const key = apiKeyInput.value.trim();
+    if (!key) { apiError.textContent = 'Please paste your API key first!'; return; }
+    if (!key.startsWith('sk-')) { apiError.textContent = 'That doesn\'t look right — keys start with "sk-ant-..."'; return; }
+    localStorage.setItem('lizard_api_key', key);
+    apiOverlay.classList.remove('visible');
+    apiError.textContent = '';
+  }
+
+  // Show overlay on first visit or if key is missing
+  if (!getSavedKey()) showApiOverlay();
+
+  // Allow Enter key in key input
+  apiKeyInput.addEventListener('keydown', e => { if (e.key === 'Enter') saveApiKey(); });
+
   // ── Session & state ──────────────────────────────────────────────
   const sessionId = Math.random().toString(36).slice(2);
   let isBusy = false;
@@ -593,16 +702,26 @@
           message: msg,
           lizardName: getLizardName(),
           sessionId,
-          nearbyObjects
+          nearbyObjects,
+          apiKey: getSavedKey()
         })
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        const errMsg = data.error || 'Something went wrong!';
-        showBubble(`😟 Oops! ${errMsg}`, 6000);
-        addMsg('iguana', errMsg);
+        if (data.error === 'NO_KEY' || data.error === 'BAD_KEY') {
+          localStorage.removeItem('lizard_api_key');
+          apiError.textContent = data.error === 'BAD_KEY'
+            ? '❌ That API key didn\'t work. Please double-check and try again.'
+            : '';
+          showApiOverlay();
+          hideBubble();
+        } else {
+          const errMsg = data.error || 'Something went wrong!';
+          showBubble(`😟 Oops! ${errMsg}`, 6000);
+          addMsg('iguana', errMsg);
+        }
       } else {
         showBubble(data.reply, 7000);
         addMsg('iguana', data.reply);

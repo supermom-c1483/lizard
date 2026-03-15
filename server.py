@@ -12,21 +12,8 @@ import urllib.error
 import socketserver
 from pathlib import Path
 
-# ── Read API key from .env file ──────────────────────────────────────────────
-def load_env():
-    env_path = Path(__file__).parent / '.env'
-    if env_path.exists():
-        for line in env_path.read_text().splitlines():
-            line = line.strip()
-            if line and not line.startswith('#') and '=' in line:
-                key, _, val = line.partition('=')
-                os.environ.setdefault(key.strip(), val.strip())
-
-load_env()
-
-API_KEY = os.environ.get('ANTHROPIC_API_KEY', '')
-PORT    = int(os.environ.get('PORT', 3000))
-PUBLIC  = Path(__file__).parent / 'public'
+PORT   = 3000
+PUBLIC = Path(__file__).parent / 'public'
 
 # Simple per-session message history
 sessions = {}
@@ -51,13 +38,14 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         name    = body.get('lizardName', 'Iggy')
         sid     = body.get('sessionId', 'default')
         nearby  = body.get('nearbyObjects', [])
+        api_key = body.get('apiKey', '').strip()
 
         if not message or not sid:
             self._json(400, {'error': 'Missing message or sessionId'})
             return
 
-        if not API_KEY or API_KEY == 'your-api-key-here':
-            self._json(401, {'error': 'Please add your API key to the .env file and restart.'})
+        if not api_key:
+            self._json(401, {'error': 'NO_KEY'})
             return
 
         # Build history
@@ -98,7 +86,7 @@ You are {name} the iguana. Be cute, fun, and friendly!"""
             'https://api.anthropic.com/v1/messages',
             data    = payload,
             headers = {
-                'x-api-key':         API_KEY,
+                'x-api-key':         api_key,
                 'anthropic-version': '2023-06-01',
                 'content-type':      'application/json',
             },
@@ -113,10 +101,10 @@ You are {name} the iguana. Be cute, fun, and friendly!"""
             self._json(200, {'reply': reply})
 
         except urllib.error.HTTPError as e:
-            err_body = e.read().decode()
             if e.code == 401:
-                self._json(401, {'error': 'Invalid API key. Please check your .env file.'})
+                self._json(401, {'error': 'BAD_KEY'})
             else:
+                err_body = e.read().decode()
                 print(f'API error {e.code}: {err_body}')
                 self._json(500, {'error': 'Something went wrong. Please try again!'})
 
